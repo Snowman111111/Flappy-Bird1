@@ -34,3 +34,33 @@ pygame.display.set_caption("Flappy Bird with Moving Pipes and Coins")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
 small_font = pygame.font.SysFont(None, 32)
+bird_x = 100
+bird_y = HEIGHT // 2
+bird_velocity = 0
+
+score = 0
+frame_count = 0
+
+menu = True
+playing = False
+game_over = False
+
+pipe_gap = PIPE_GAP_START
+pipe_speed = PIPE_SPEED_START
+
+HIGHSCORE_FILE = "highscore.txt"
+
+def load_highscore():
+    if os.path.exists(HIGHSCORE_FILE):
+        with open(HIGHSCORE_FILE, "r") as f:
+            try:
+                return int(f.read())
+            except:
+                return 0
+    return 0
+
+def save_highscore(score):
+    with open(HIGHSCORE_FILE, "w") as f:
+        f.write(str(score))
+
+highscore = load_highscore()
