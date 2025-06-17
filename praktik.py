@@ -64,3 +64,12 @@ def save_highscore(score):
         f.write(str(score))
 
 highscore = load_highscore()
+def draw_button(text, x, y, w, h, color, text_color):
+    pygame.draw.rect(screen, color, (x, y, w, h), border_radius=10)
+    label = small_font.render(text, True, text_color)
+    label_rect = label.get_rect(center=(x + w // 2, y + h // 2))
+    screen.blit(label, label_rect)
+    return pygame.Rect(x, y, w, h)
+
+def draw_bird(x, y):
+    pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
