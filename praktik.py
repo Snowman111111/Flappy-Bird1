@@ -133,6 +133,44 @@ class Pipe:
                 return True
         return False
 
+class Coin:
+    def __init__(self, pipes):
+        self.radius = 10
+        self.x = WIDTH + 20
+        self.y = self.find_position(pipes)
+        self.collected = False
+
+    def find_position(self, pipes):
+        max_attempts = 100
+        for _ in range(max_attempts):
+            y_candidate = random.randint(50, HEIGHT - 50)
+            collide = False
+            for pipe in pipes:
+                pipe_top = pipe.current_top_height if hasattr(pipe, 'current_top_height') else pipe.top_height
+                pipe_bottom = pipe_top + pipe_gap
+                # Проверяем, чтобы монета не находилась в области трубы с отступом радиуса
+                if (self.x + self.radius > pipe.x and self.x - self.radius < pipe.x + pipe.width):
+                    # Проверяем вертикально с запасом радиуса, чтобы монета не перекрывалась
+                    if pipe_top - self.radius < y_candidate < pipe_bottom + self.radius:
+                        collide = True
+                        break
+            if not collide:
+                return y_candidate
+        # Если не нашли подходящее место, ставим посередине экрана (редко происходит)
+        return HEIGHT // 2
+
+    def update(self):
+        self.x -= pipe_speed
+
+    def draw(self, surface):
+        # Рисуем монету с "блеском" - два круга
+        pygame.draw.circle(surface, YELLOW, (int(self.x), int(self.y)), self.radius)
+        pygame.draw.circle(surface, WHITE, (int(self.x - self.radius//3), int(self.y - self.radius//3)), self.radius//3)
+
+    def collides_with(self, bx, by, br):
+        dist = ((bx - self.x) ** 2 + (by - self.y) ** 2) ** 0.5
+        return dist < br + self.radius
+
 class Cloud:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
