@@ -89,3 +89,41 @@ def reset_game():
     frame_count = 0
     pipe_gap = PIPE_GAP_START
     pipe_speed = PIPE_SPEED_START
+
+    class Pipe:
+        def __init__(self, x):
+            self.x = x
+            self.width = PIPE_WIDTH
+            self.color = random.choice([GREEN, DARK_GREEN, ORANGE])
+            self.top_height = random.randint(50, HEIGHT - pipe_gap - 50)
+            self.passed = False
+
+            self.is_moving = random.random() < 0.4
+            self.move_amplitude = random.randint(10, 30) if self.is_moving else 0
+            self.move_speed = random.uniform(0.01, 0.03) if self.is_moving else 0
+            self.move_offset = random.uniform(0, 2 * math.pi) if self.is_moving else 0
+            self.current_top_height = self.top_height
+
+        def update(self):
+            self.x -= pipe_speed
+            if self.is_moving:
+                offset = math.sin(pygame.time.get_ticks() * self.move_speed + self.move_offset) * self.move_amplitude
+            else:
+                offset = 0
+            self.current_top_height = self.top_height + offset
+            if self.current_top_height < 40:
+                self.current_top_height = 40
+            if self.current_top_height > HEIGHT - pipe_gap - 40:
+                self.current_top_height = HEIGHT - pipe_gap - 40
+
+        def draw(self, surface):
+            bottom_y = self.current_top_height + pipe_gap
+            pygame.draw.rect(surface, self.color, (self.x, 0, self.width, int(self.current_top_height)))
+            pygame.draw.rect(surface, self.color, (self.x, int(bottom_y), self.width, HEIGHT - int(bottom_y)))
+
+        def collides_with(self, bx, by, br):
+            bottom_y = self.current_top_height + pipe_gap
+            if bx + br > self.x and bx - br < self.x + self.width:
+                if by - br < self.current_top_height or by + br > bottom_y:
+                    return True
+            return False
