@@ -34,6 +34,7 @@ pygame.display.set_caption("Flappy Bird with Moving Pipes and Coins")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 48)
 small_font = pygame.font.SysFont(None, 32)
+
 bird_x = 100
 bird_y = HEIGHT // 2
 bird_velocity = 0
@@ -64,6 +65,7 @@ def save_highscore(score):
         f.write(str(score))
 
 highscore = load_highscore()
+
 def draw_button(text, x, y, w, h, color, text_color):
     pygame.draw.rect(screen, color, (x, y, w, h), border_radius=10)
     label = small_font.render(text, True, text_color)
@@ -73,6 +75,7 @@ def draw_button(text, x, y, w, h, color, text_color):
 
 def draw_bird(x, y):
     pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
+
 def check_collision(bird_y, pipes):
     for pipe in pipes:
         if pipe.collides_with(bird_x, bird_y, BIRD_RADIUS):
@@ -90,40 +93,75 @@ def reset_game():
     pipe_gap = PIPE_GAP_START
     pipe_speed = PIPE_SPEED_START
 
-    class Pipe:
-        def __init__(self, x):
-            self.x = x
-            self.width = PIPE_WIDTH
-            self.color = random.choice([GREEN, DARK_GREEN, ORANGE])
-            self.top_height = random.randint(50, HEIGHT - pipe_gap - 50)
-            self.passed = False
+class Pipe:
+    def __init__(self, x):
+        self.x = x
+        self.width = PIPE_WIDTH
+        self.color = random.choice([GREEN, DARK_GREEN, ORANGE])
+        self.top_height = random.randint(50, HEIGHT - pipe_gap - 50)
+        self.passed = False
 
-            self.is_moving = random.random() < 0.4
-            self.move_amplitude = random.randint(10, 30) if self.is_moving else 0
-            self.move_speed = random.uniform(0.01, 0.03) if self.is_moving else 0
-            self.move_offset = random.uniform(0, 2 * math.pi) if self.is_moving else 0
-            self.current_top_height = self.top_height
+        # 40% труб двигаются вверх-вниз
+        self.is_moving = random.random() < 0.4
+        self.move_amplitude = random.randint(10, 30) if self.is_moving else 0
+        self.move_speed = random.uniform(0.01, 0.03) if self.is_moving else 0
+        self.move_offset = random.uniform(0, 2*math.pi) if self.is_moving else 0
+        self.current_top_height = self.top_height
 
-        def update(self):
-            self.x -= pipe_speed
-            if self.is_moving:
-                offset = math.sin(pygame.time.get_ticks() * self.move_speed + self.move_offset) * self.move_amplitude
-            else:
-                offset = 0
-            self.current_top_height = self.top_height + offset
-            if self.current_top_height < 40:
-                self.current_top_height = 40
-            if self.current_top_height > HEIGHT - pipe_gap - 40:
-                self.current_top_height = HEIGHT - pipe_gap - 40
+    def update(self):
+        self.x -= pipe_speed
+        if self.is_moving:
+            offset = math.sin(pygame.time.get_ticks() * self.move_speed + self.move_offset) * self.move_amplitude
+        else:
+            offset = 0
+        self.current_top_height = self.top_height + offset
+        # Ограничения по высоте
+        if self.current_top_height < 40:
+            self.current_top_height = 40
+        if self.current_top_height > HEIGHT - pipe_gap - 40:
+            self.current_top_height = HEIGHT - pipe_gap - 40
 
-        def draw(self, surface):
-            bottom_y = self.current_top_height + pipe_gap
-            pygame.draw.rect(surface, self.color, (self.x, 0, self.width, int(self.current_top_height)))
-            pygame.draw.rect(surface, self.color, (self.x, int(bottom_y), self.width, HEIGHT - int(bottom_y)))
+    def draw(self, surface):
+        bottom_y = self.current_top_height + pipe_gap
+        pygame.draw.rect(surface, self.color, (self.x, 0, self.width, int(self.current_top_height)))
+        pygame.draw.rect(surface, self.color, (self.x, int(bottom_y), self.width, HEIGHT - int(bottom_y)))
 
-        def collides_with(self, bx, by, br):
-            bottom_y = self.current_top_height + pipe_gap
-            if bx + br > self.x and bx - br < self.x + self.width:
-                if by - br < self.current_top_height or by + br > bottom_y:
-                    return True
-            return False
+    def collides_with(self, bx, by, br):
+        bottom_y = self.current_top_height + pipe_gap
+        if bx + br > self.x and bx - br < self.x + self.width:
+            if by - br < self.current_top_height or by + br > bottom_y:
+                return True
+        return False
+
+class Cloud:
+    def __init__(self):
+        self.x = random.randint(0, WIDTH)
+        self.y = random.randint(20, 100)
+        self.speed = random.uniform(0.2, 0.5)
+        self.size = random.randint(30, 60)
+
+    def move(self):
+        self.x -= self.speed
+        if self.x < -self.size * 3:
+            self.x = WIDTH + random.randint(50, 150)
+            self.y = random.randint(20, 100)
+            self.speed = random.uniform(0.2, 0.5)
+            self.size = random.randint(30, 60)
+
+    def draw(self, surface):
+        # Рисуем облако из нескольких овалов для пушистости
+        x, y, s = int(self.x), int(self.y), self.size
+        # Основа
+        pygame.draw.ellipse(surface, LIGHT_GRAY, (x, y + s//3, s * 2, s))
+        # Верхние "пухлые" части облака
+        pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s//3, y, s, s))
+        pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s, y - s//3, s, s))
+        pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s + s//2, y + s//4, s, s))
+
+clouds = [Cloud() for _ in range(5)]
+
+bird_y = HEIGHT // 2
+bird_velocity = 0
+
+pipes = []
+coins = []
