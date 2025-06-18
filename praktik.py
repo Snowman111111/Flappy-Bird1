@@ -73,3 +73,19 @@ def draw_button(text, x, y, w, h, color, text_color):
 
 def draw_bird(x, y):
     pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
+def check_collision(bird_y, pipes):
+    for pipe in pipes:
+        if pipe.collides_with(bird_x, bird_y, BIRD_RADIUS):
+            return True
+    if bird_y - BIRD_RADIUS < 0 or bird_y + BIRD_RADIUS > HEIGHT:
+        return True
+    return False
+
+def reset_game():
+    global bird_y, bird_velocity, score, frame_count, pipe_gap, pipe_speed
+    bird_y = HEIGHT // 2
+    bird_velocity = 0
+    score = 0
+    frame_count = 0
+    pipe_gap = PIPE_GAP_START
+    pipe_speed = PIPE_SPEED_START
