@@ -19,25 +19,20 @@ YELLOW = (255, 223, 0)
 LIGHT_GRAY = (220, 220, 220)
 ORANGE = (255, 165, 0)
 
-# Цвета для ночи
 NIGHT_SKY = (10, 10, 40)
 MOON_COLOR = (230, 230, 210)
 STAR_COLOR = (255, 255, 200)
 
 BIRD_RADIUS = 20
-GRAVITY = 0.5
-JUMP_STRENGTH = -10
 
 PIPE_WIDTH = 70
-PIPE_GAP_START = 200
 PIPE_GAP_MIN = 120
-PIPE_SPEED_START = 3
 PIPE_SPEED_MAX = 8
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Flappy Bird with Moving Pipes and Coins")
 clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 48)
+font = pygame.font.SysFont(None, 36)
 small_font = pygame.font.SysFont(None, 32)
 
 bird_x = 100
@@ -50,23 +45,24 @@ frame_count = 0
 menu = True
 playing = False
 game_over = False
+difficulty_menu = True
 
-pipe_gap = PIPE_GAP_START
-pipe_speed = PIPE_SPEED_START
+pipe_gap = 200
+pipe_speed = 3
+GRAVITY = 0.5
+JUMP_STRENGTH = -10
 
 HIGHSCORE_FILE = "highscore.txt"
 
-# Режим дня/ночи
 is_night = False
 
-# Звёзды — список координат и "яркости"
 NUM_STARS = 50
 stars = []
 for _ in range(NUM_STARS):
     x = random.randint(0, WIDTH)
-    y = random.randint(0, HEIGHT // 2)  # Звёзды на верхней половине экрана
+    y = random.randint(0, HEIGHT // 2)
     brightness = random.randint(150, 255)
-    stars.append([x, y, brightness, random.choice([1, -1])])  # последний элемент — направление мерцания
+    stars.append([x, y, brightness, random.choice([1, -1])])
 
 def load_highscore():
     if os.path.exists(HIGHSCORE_FILE):
@@ -102,13 +98,12 @@ def check_collision(bird_y, pipes):
     return False
 
 def reset_game():
-    global bird_y, bird_velocity, score, frame_count, pipe_gap, pipe_speed
+    global bird_y, bird_velocity, score, frame_count
+    global pipe_gap, pipe_speed, GRAVITY, JUMP_STRENGTH
     bird_y = HEIGHT // 2
     bird_velocity = 0
     score = 0
     frame_count = 0
-    pipe_gap = PIPE_GAP_START
-    pipe_speed = PIPE_SPEED_START
 
 class Pipe:
     def __init__(self, x):
@@ -117,8 +112,6 @@ class Pipe:
         self.color = random.choice([GREEN, DARK_GREEN, ORANGE])
         self.top_height = random.randint(50, HEIGHT - pipe_gap - 50)
         self.passed = False
-
-        # 40% труб двигаются вверх-вниз
         self.is_moving = random.random() < 0.4
         self.move_amplitude = random.randint(10, 30) if self.is_moving else 0
         self.move_speed = random.uniform(0.01, 0.03) if self.is_moving else 0
@@ -132,7 +125,6 @@ class Pipe:
         else:
             offset = 0
         self.current_top_height = self.top_height + offset
-        # Ограничения по высоте
         if self.current_top_height < 40:
             self.current_top_height = 40
         if self.current_top_height > HEIGHT - pipe_gap - 40:
@@ -165,22 +157,18 @@ class Coin:
             for pipe in pipes:
                 pipe_top = pipe.current_top_height if hasattr(pipe, 'current_top_height') else pipe.top_height
                 pipe_bottom = pipe_top + pipe_gap
-                # Проверяем, чтобы монета не находилась в области трубы с отступом радиуса
                 if (self.x + self.radius > pipe.x and self.x - self.radius < pipe.x + pipe.width):
-                    # Проверяем вертикально с запасом радиуса, чтобы монета не перекрывалась
                     if pipe_top - self.radius < y_candidate < pipe_bottom + self.radius:
                         collide = True
                         break
             if not collide:
                 return y_candidate
-        # Если не нашли подходящее место, ставим посередине экрана (редко происходит)
         return HEIGHT // 2
 
     def update(self):
         self.x -= pipe_speed
 
     def draw(self, surface):
-        # Рисуем монету с "блеском" - два круга
         pygame.draw.circle(surface, YELLOW, (int(self.x), int(self.y)), self.radius)
         pygame.draw.circle(surface, WHITE, (int(self.x - self.radius//3), int(self.y - self.radius//3)), self.radius//3)
 
@@ -204,11 +192,8 @@ class Cloud:
             self.size = random.randint(30, 60)
 
     def draw(self, surface):
-        # Рисуем облако из нескольких овалов для пушистости
         x, y, s = int(self.x), int(self.y), self.size
-        # Основа
         pygame.draw.ellipse(surface, LIGHT_GRAY, (x, y + s//3, s * 2, s))
-        # Верхние "пухлые" части облака
         pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s//3, y, s, s))
         pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s, y - s//3, s, s))
         pygame.draw.ellipse(surface, LIGHT_GRAY, (x + s + s//2, y + s//4, s, s))
@@ -230,22 +215,20 @@ def check_coin_collection():
 
 def main():
     global bird_y, bird_velocity, pipes, coins, score, frame_count
-    global pipe_gap, pipe_speed, menu, playing, game_over, highscore, is_night
+    global pipe_gap, pipe_speed, menu, playing, game_over, highscore, is_night, difficulty_menu
+    global GRAVITY, JUMP_STRENGTH
 
     running = True
+
     while running:
         clock.tick(FPS)
 
-        # Фон и небо + солнце или луна и звёзды
         if is_night:
             screen.fill(NIGHT_SKY)
-
-            # Рисуем звёзды с мерцанием
             for star in stars:
                 x, y, brightness, direction = star
                 color = (brightness, brightness, int(brightness * 0.8))
                 pygame.draw.circle(screen, color, (x, y), 2)
-                # Изменяем яркость для мерцания
                 star[2] += direction * 2
                 if star[2] >= 255:
                     star[2] = 255
@@ -253,14 +236,11 @@ def main():
                 elif star[2] <= 150:
                     star[2] = 150
                     star[3] = 1
-
-            # Рисуем луну (простой круг с "затенением")
             moon_x, moon_y = WIDTH - 70, 70
             pygame.draw.circle(screen, MOON_COLOR, (moon_x, moon_y), 40)
             pygame.draw.circle(screen, NIGHT_SKY, (moon_x + 15, moon_y - 10), 30)
         else:
             screen.fill(BLUE)
-            # Рисуем солнце
             pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
 
         for event in pygame.event.get():
@@ -268,35 +248,77 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-            # Переключение день/ночь клавишей N
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_n:
                     is_night = not is_night
 
-            if menu:
+            if difficulty_menu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = pygame.mouse.get_pos()
-                    if start_button.collidepoint(mx, my):
+                    if easy_button.collidepoint(mx, my):
+                        pipe_speed = 2.5
+                        pipe_gap = 250
+                        GRAVITY = 0.4
+                        JUMP_STRENGTH = -9
+                        difficulty_menu = False
                         menu = False
                         playing = True
                         reset_game()
                         pipes.clear()
                         coins.clear()
+                    elif normal_button.collidepoint(mx, my):
+                        pipe_speed = 3
+                        pipe_gap = 200
+                        GRAVITY = 0.5
+                        JUMP_STRENGTH = -10
+                        difficulty_menu = False
+                        menu = False
+                        playing = True
+                        reset_game()
+                        pipes.clear()
+                        coins.clear()
+                    elif hard_button.collidepoint(mx, my):
+                        pipe_speed = 4.5
+                        pipe_gap = 160
+                        GRAVITY = 0.6
+                        JUMP_STRENGTH = -11
+                        difficulty_menu = False
+                        menu = False
+                        playing = True
+                        reset_game()
+                        pipes.clear()
+                        coins.clear()
+
+            elif menu:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mx, my = pygame.mouse.get_pos()
+                    if start_button.collidepoint(mx, my):
+                        difficulty_menu = True
+                        menu = False
+
             elif playing:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     bird_velocity = JUMP_STRENGTH
+
             elif game_over:
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    menu = True
+                    difficulty_menu = True
                     game_over = False
 
-        # Рисуем и двигаем облака
-        # Можно не рисовать облака ночью, но я оставил их для атмосферы
         for cloud in clouds:
             cloud.move()
             cloud.draw(screen)
 
-        if menu:
+        if difficulty_menu:
+            title = font.render("Выберите уровень сложности", True, BLACK)
+            screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//3))
+            easy_button = draw_button("Простой", WIDTH//2 - 195, HEIGHT//2, 120, 50, GREEN, WHITE)
+            normal_button = draw_button("Нормальный", WIDTH//2 - 70, HEIGHT//2, 140, 50, ORANGE, WHITE)
+            hard_button = draw_button("Сложный", WIDTH//2 + 75, HEIGHT//2, 120, 50, RED, WHITE)
+            info = small_font.render("Press N to toggle Day/Night anytime", True, BLACK)
+            screen.blit(info, (WIDTH//2 - info.get_width()//2, HEIGHT//2 + 70))
+
+        elif menu:
             title = font.render("Flappy Bird", True, BLACK)
             screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//3))
             start_button = draw_button("Start Game", WIDTH//2 - 100, HEIGHT//2, 200, 50, GREEN, WHITE)
@@ -307,30 +329,32 @@ def main():
             bird_velocity += GRAVITY
             bird_y += bird_velocity
 
-            # Создаём трубы
             if len(pipes) == 0 or pipes[-1].x < WIDTH - 200:
                 pipes.append(Pipe(WIDTH))
 
-            # Обновляем трубы
             for pipe in pipes:
                 pipe.update()
-            # Удаляем трубы, которые ушли за экран
-            if pipes and pipes[0].x < -PIPE_WIDTH:
-                pipes.pop(0)
+                pipe.draw(screen)
 
-            # Создаём монеты
-            if len(coins) == 0 or (coins[-1].x < WIDTH - 250 and random.random() < 0.02):
+            pipes = [p for p in pipes if p.x + p.width > 0]
+
+            if len(coins) == 0 or coins[-1].x < WIDTH - 150:
                 coins.append(Coin(pipes))
 
-            # Обновляем монеты
             for coin in coins:
-                coin.update()
-            # Удаляем собранные или ушедшие монеты
-            coins = [c for c in coins if c.x > -20 and not c.collected]
+                if not coin.collected:
+                    coin.update()
+                    coin.draw(screen)
+
+            coins = [c for c in coins if c.x + c.radius > 0 and not c.collected]
 
             check_coin_collection()
 
-            # Проверка столкновений
+            draw_bird(bird_x, bird_y)
+
+            score_label = font.render(f"Score: {score}", True, BLACK)
+            screen.blit(score_label, (10, 10))
+
             if check_collision(bird_y, pipes):
                 playing = False
                 game_over = True
@@ -338,49 +362,22 @@ def main():
                     highscore = score
                     save_highscore(highscore)
 
-            # Проверяем, прошла ли птица трубу, чтобы увеличить очки
             for pipe in pipes:
-                if not pipe.passed and pipe.x + PIPE_WIDTH < bird_x:
+                if not pipe.passed and pipe.x + pipe.width < bird_x:
                     pipe.passed = True
                     score += 1
 
-                    # Сужаем разрыв и увеличиваем скорость постепенно, но не больше лимита
-                    if pipe_gap > PIPE_GAP_MIN:
-                        pipe_gap -= 1
-                    if pipe_speed < PIPE_SPEED_MAX:
-                        pipe_speed += 0.1
-
-            # Рисуем трубы
-            for pipe in pipes:
-                pipe.draw(screen)
-
-            # Рисуем монеты
-            for coin in coins:
-                if not coin.collected:
-                    coin.draw(screen)
-
-            # Рисуем птицу
-            draw_bird(bird_x, bird_y)
-
-            # Отображаем счет
-            score_text = font.render(f"Score: {score}", True, BLACK)
-            screen.blit(score_text, (10, 10))
-
-            highscore_text = small_font.render(f"Highscore: {highscore}", True, BLACK)
-            screen.blit(highscore_text, (10, 50))
-
         elif game_over:
-            game_over_text = font.render("Game Over", True, RED)
-            screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//3))
-            score_text = small_font.render(f"Score: {score}", True, BLACK)
-            screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, HEIGHT//3 + 60))
-            highscore_text = small_font.render(f"Highscore: {highscore}", True, BLACK)
-            screen.blit(highscore_text, (WIDTH//2 - highscore_text.get_width()//2, HEIGHT//3 + 90))
-            restart_text = small_font.render("Press SPACE to Restart", True, BLACK)
-            screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, HEIGHT//3 + 140))
+            over_label = font.render("Game Over", True, RED)
+            screen.blit(over_label, (WIDTH//2 - over_label.get_width()//2, HEIGHT//3))
+            score_label = small_font.render(f"Score: {score}", True, BLACK)
+            screen.blit(score_label, (WIDTH//2 - score_label.get_width()//2, HEIGHT//3 + 60))
+            highscore_label = small_font.render(f"Highscore: {highscore}", True, BLACK)
+            screen.blit(highscore_label, (WIDTH//2 - highscore_label.get_width()//2, HEIGHT//3 + 90))
+            restart_label = small_font.render("Press SPACE to restart", True, BLACK)
+            screen.blit(restart_label, (WIDTH//2 - restart_label.get_width()//2, HEIGHT//3 + 140))
 
-        pygame.display.flip()
-
+        pygame.display.update()
 
 if __name__ == "__main__":
     main()
