@@ -41,6 +41,7 @@ bird_velocity = 0
 
 score = 0
 frame_count = 0
+lives = 3
 
 menu = True
 playing = False
@@ -89,6 +90,13 @@ def draw_button(text, x, y, w, h, color, text_color):
 def draw_bird(x, y):
     pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
 
+def draw_heart(surface, x, y, size=20):
+    radius = size // 4
+    pygame.draw.circle(surface, RED, (x - radius, y), radius)
+    pygame.draw.circle(surface, RED, (x + radius, y), radius)
+    points = [(x - size // 2, y), (x + size // 2, y), (x, y + size // 1.3)]
+    pygame.draw.polygon(surface, RED, points)
+
 def draw_ground():
     ground_height = 60
     grass_height = 20
@@ -115,10 +123,12 @@ def check_collision(bird_y, pipes):
 def reset_game():
     global bird_y, bird_velocity, score, frame_count
     global pipe_gap, pipe_speed, GRAVITY, JUMP_STRENGTH
+    global lives
     bird_y = HEIGHT // 2
     bird_velocity = 0
     score = 0
     frame_count = 0
+    lives = 3
 
 class Pipe:
     def __init__(self, x):
@@ -229,6 +239,7 @@ def check_coin_collection():
             score += 10
 
 def main():
+    global lives
     global bird_y, bird_velocity, pipes, coins, score, frame_count
     global pipe_gap, pipe_speed, menu, playing, game_over, highscore, is_night, difficulty_menu
     global GRAVITY, JUMP_STRENGTH
@@ -371,12 +382,20 @@ def main():
             score_label = font.render(f"Score: {score}", True, BLACK)
             screen.blit(score_label, (10, 10))
 
+            for i in range(lives):
+                draw_heart(screen, 10 + i * 30, 50, 20)
+
             if check_collision(bird_y, pipes):
-                playing = False
-                game_over = True
-                if score > highscore:
-                    highscore = score
-                    save_highscore(highscore)
+                lives -= 1
+                if lives <= 0:
+                    playing = False
+                    game_over = True
+                    if score > highscore:
+                        highscore = score
+                        save_highscore(highscore)
+                else:
+                    bird_y = HEIGHT // 2
+                    bird_velocity = 0
 
             for pipe in pipes:
                 if not pipe.passed and pipe.x + pipe.width < bird_x:
