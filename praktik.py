@@ -234,3 +234,91 @@ def main():
                         reset_game()
                         pipes.clear()
                         coins.clear()
+            elif playing:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    bird_velocity = JUMP_STRENGTH
+            elif game_over:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    menu = True
+                    game_over = False
+
+        # Рисуем солнце
+        pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
+
+        # Рисуем и двигаем облака
+        for cloud in clouds:
+            cloud.move()
+            cloud.draw(screen)
+
+        if menu:
+            title = font.render("Flappy Bird", True, WHITE)
+            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 150))
+            start_button = draw_button("Начать игру", WIDTH // 2 - 100, 300, 200, 50, GREEN, BLACK)
+            highscore_text = small_font.render(f"Рекорд: {highscore}", True, WHITE)
+            screen.blit(highscore_text, (WIDTH // 2 - highscore_text.get_width() // 2, 400))
+            pygame.display.flip()
+            continue
+
+        if playing:
+            bird_velocity += GRAVITY
+            bird_y += bird_velocity
+
+            if frame_count % 90 == 0:
+                pipes.append(Pipe(WIDTH))
+
+            # Генерируем монету реже
+            if random.random() < 0.01 and len(pipes) > 0:
+                coins.append(Coin(pipes))
+
+            # Обновляем трубы
+            for pipe in pipes:
+                pipe.update()
+            pipes = [p for p in pipes if p.x + p.width > 0]
+
+            # Обновляем монеты
+            for coin in coins:
+                coin.update()
+            coins = [c for c in coins if c.x > -20 and not c.collected]
+
+            # Проверяем, пройдена ли труба
+            for pipe in pipes:
+                if not pipe.passed and pipe.x + pipe.width < bird_x:
+                    pipe.passed = True
+                    score += 1
+
+            check_coin_collection()
+
+            # Увеличение скорости и уменьшение промежутка по мере набора очков
+            pipe_speed = min(PIPE_SPEED_START + (score // 10), PIPE_SPEED_MAX)
+            pipe_gap = max(PIPE_GAP_START - 10 * (score // 10), PIPE_GAP_MIN)
+
+            draw_bird(bird_x, bird_y)
+            for pipe in pipes:
+                pipe.draw(screen)
+            for coin in coins:
+                coin.draw(screen)
+
+            score_text = font.render(str(score), True, WHITE)
+            screen.blit(score_text, (10, 10))
+
+            if check_collision(bird_y, pipes):
+                playing = False
+                game_over = True
+                if score > highscore:
+                    highscore = score
+                    save_highscore(highscore)
+
+            frame_count += 1
+
+        if game_over:
+            over_text = font.render("Игра окончена", True, RED)
+            screen.blit(over_text, (WIDTH // 2 - over_text.get_width() // 2, 200))
+            score_text = font.render(f"Очки: {score}", True, WHITE)
+            screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 280))
+            restart_text = small_font.render("Нажмите ПРОБЕЛ для рестарта", True, WHITE)
+            screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, 360))
+
+        pygame.display.flip()
+
+if __name__ == "__main__":
+    main()
