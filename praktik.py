@@ -201,6 +201,36 @@ class Coin:
         dist = ((bx - self.x) ** 2 + (by - self.y) ** 2) ** 0.5
         return dist < br + self.radius
 
+class Heart:
+    def __init__(self, pipes):
+        self.radius = 12
+        self.x = WIDTH + 30
+        self.y = self.find_position(pipes)
+        self.collected = False
+
+    def find_position(self, pipes):
+        nearest_pipe = None
+        for pipe in pipes:
+            if pipe.x + pipe.width > WIDTH and (nearest_pipe is None or pipe.x < nearest_pipe.x):
+                nearest_pipe = pipe
+
+        if nearest_pipe:
+            pipe_top = nearest_pipe.current_top_height
+            pipe_bottom = pipe_top + pipe_gap
+            return random.randint(int(pipe_top + self.radius), int(pipe_bottom - self.radius))
+
+        return HEIGHT // 2
+
+    def update(self):
+        self.x -= pipe_speed
+
+    def draw(self, surface):
+        draw_heart(surface, int(self.x), int(self.y), size=24)
+
+    def collides_with(self, bx, by, br):
+        dist = ((bx - self.x) ** 2 + (by - self.y) ** 2) ** 0.5
+        return dist < br + self.radius
+
 class Cloud:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
@@ -228,6 +258,7 @@ clouds = [Cloud() for _ in range(5)]
 bird_y = HEIGHT // 2
 bird_velocity = 0
 
+hearts = []
 pipes = []
 coins = []
 
@@ -237,8 +268,16 @@ def check_coin_collection():
         if not coin.collected and coin.collides_with(bird_x, bird_y, BIRD_RADIUS):
             coin.collected = True
             score += 10
+def check_heart_collection():
+    global lives
+    for heart in hearts:
+        if not heart.collected and heart.collides_with(bird_x, bird_y, BIRD_RADIUS):
+            heart.collected = True
+            if lives < 3:
+                lives += 1
 
 def main():
+    global hearts
     global lives
     global bird_y, bird_velocity, pipes, coins, score, frame_count
     global pipe_gap, pipe_speed, menu, playing, game_over, highscore, is_night, difficulty_menu
@@ -293,6 +332,7 @@ def main():
                         reset_game()
                         pipes.clear()
                         coins.clear()
+                        hearts.clear()
                     elif normal_button.collidepoint(mx, my):
                         pipe_speed = 3
                         pipe_gap = 200
@@ -304,6 +344,7 @@ def main():
                         reset_game()
                         pipes.clear()
                         coins.clear()
+                        hearts.clear()
                     elif hard_button.collidepoint(mx, my):
                         pipe_speed = 4.5
                         pipe_gap = 160
@@ -315,6 +356,7 @@ def main():
                         reset_game()
                         pipes.clear()
                         coins.clear()
+                        hearts.clear()
 
             elif menu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -367,6 +409,19 @@ def main():
 
             if len(coins) == 0 or coins[-1].x < WIDTH - 150:
                 coins.append(Coin(pipes))
+
+            if len(hearts) == 0 or (hearts[-1].x < WIDTH - 400 and random.random() < 0.01):
+                hearts.append(Heart(pipes))
+
+            for heart in hearts:
+                if not heart.collected:
+                    heart.update()
+                    heart.draw(screen)
+
+            hearts = [h for h in hearts if h.x + h.radius > 0 and not h.collected]
+            check_heart_collection()
+
+
 
             for coin in coins:
                 if not coin.collected:
