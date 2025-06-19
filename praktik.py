@@ -203,3 +203,34 @@ bird_velocity = 0
 
 pipes = []
 coins = []
+
+def check_coin_collection():
+    global score
+    for coin in coins:
+        if not coin.collected and coin.collides_with(bird_x, bird_y, BIRD_RADIUS):
+            coin.collected = True
+            score += 10
+
+def main():
+    global bird_y, bird_velocity, pipes, coins, score, frame_count
+    global pipe_gap, pipe_speed, menu, playing, game_over, highscore
+
+    running = True
+    while running:
+        clock.tick(FPS)
+        screen.fill(BLUE)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if menu:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mx, my = pygame.mouse.get_pos()
+                    if start_button.collidepoint(mx, my):
+                        menu = False
+                        playing = True
+                        reset_game()
+                        pipes.clear()
+                        coins.clear()
