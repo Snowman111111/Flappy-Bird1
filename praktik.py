@@ -19,6 +19,11 @@ YELLOW = (255, 223, 0)
 LIGHT_GRAY = (220, 220, 220)
 ORANGE = (255, 165, 0)
 
+# Цвета для ночи
+NIGHT_SKY = (10, 10, 40)
+MOON_COLOR = (230, 230, 210)
+STAR_COLOR = (255, 255, 200)
+
 BIRD_RADIUS = 20
 GRAVITY = 0.5
 JUMP_STRENGTH = -10
@@ -50,6 +55,18 @@ pipe_gap = PIPE_GAP_START
 pipe_speed = PIPE_SPEED_START
 
 HIGHSCORE_FILE = "highscore.txt"
+
+# Режим дня/ночи
+is_night = False
+
+# Звёзды — список координат и "яркости"
+NUM_STARS = 50
+stars = []
+for _ in range(NUM_STARS):
+    x = random.randint(0, WIDTH)
+    y = random.randint(0, HEIGHT // 2)  # Звёзды на верхней половине экрана
+    brightness = random.randint(150, 255)
+    stars.append([x, y, brightness, random.choice([1, -1])])  # последний элемент — направление мерцания
 
 def load_highscore():
     if os.path.exists(HIGHSCORE_FILE):
@@ -213,17 +230,48 @@ def check_coin_collection():
 
 def main():
     global bird_y, bird_velocity, pipes, coins, score, frame_count
-    global pipe_gap, pipe_speed, menu, playing, game_over, highscore
+    global pipe_gap, pipe_speed, menu, playing, game_over, highscore, is_night
 
     running = True
     while running:
         clock.tick(FPS)
-        screen.fill(BLUE)
+
+        # Фон и небо + солнце или луна и звёзды
+        if is_night:
+            screen.fill(NIGHT_SKY)
+
+            # Рисуем звёзды с мерцанием
+            for star in stars:
+                x, y, brightness, direction = star
+                color = (brightness, brightness, int(brightness * 0.8))
+                pygame.draw.circle(screen, color, (x, y), 2)
+                # Изменяем яркость для мерцания
+                star[2] += direction * 2
+                if star[2] >= 255:
+                    star[2] = 255
+                    star[3] = -1
+                elif star[2] <= 150:
+                    star[2] = 150
+                    star[3] = 1
+
+            # Рисуем луну (простой круг с "затенением")
+            moon_x, moon_y = WIDTH - 70, 70
+            pygame.draw.circle(screen, MOON_COLOR, (moon_x, moon_y), 40)
+            pygame.draw.circle(screen, NIGHT_SKY, (moon_x + 15, moon_y - 10), 30)
+        else:
+            screen.fill(BLUE)
+            # Рисуем солнце
+            pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            # Переключение день/ночь клавишей N
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_n:
+                    is_night = not is_night
 
             if menu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -242,65 +290,47 @@ def main():
                     menu = True
                     game_over = False
 
-        # Рисуем солнце
-        pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
-
         # Рисуем и двигаем облака
+        # Можно не рисовать облака ночью, но я оставил их для атмосферы
         for cloud in clouds:
             cloud.move()
             cloud.draw(screen)
 
         if menu:
-            title = font.render("Flappy Bird", True, WHITE)
-            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 150))
-            start_button = draw_button("Начать игру", WIDTH // 2 - 100, 300, 200, 50, GREEN, BLACK)
-            highscore_text = small_font.render(f"Рекорд: {highscore}", True, WHITE)
-            screen.blit(highscore_text, (WIDTH // 2 - highscore_text.get_width() // 2, 400))
-            pygame.display.flip()
-            continue
+            title = font.render("Flappy Bird", True, BLACK)
+            screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//3))
+            start_button = draw_button("Start Game", WIDTH//2 - 100, HEIGHT//2, 200, 50, GREEN, WHITE)
+            info = small_font.render("Press N to toggle Day/Night anytime", True, BLACK)
+            screen.blit(info, (WIDTH//2 - info.get_width()//2, HEIGHT//2 + 70))
 
-        if playing:
+        elif playing:
             bird_velocity += GRAVITY
             bird_y += bird_velocity
 
-            if frame_count % 90 == 0:
+            # Создаём трубы
+            if len(pipes) == 0 or pipes[-1].x < WIDTH - 200:
                 pipes.append(Pipe(WIDTH))
-
-            # Генерируем монету реже
-            if random.random() < 0.01 and len(pipes) > 0:
-                coins.append(Coin(pipes))
 
             # Обновляем трубы
             for pipe in pipes:
                 pipe.update()
-            pipes = [p for p in pipes if p.x + p.width > 0]
+            # Удаляем трубы, которые ушли за экран
+            if pipes and pipes[0].x < -PIPE_WIDTH:
+                pipes.pop(0)
+
+            # Создаём монеты
+            if len(coins) == 0 or (coins[-1].x < WIDTH - 250 and random.random() < 0.02):
+                coins.append(Coin(pipes))
 
             # Обновляем монеты
             for coin in coins:
                 coin.update()
+            # Удаляем собранные или ушедшие монеты
             coins = [c for c in coins if c.x > -20 and not c.collected]
-
-            # Проверяем, пройдена ли труба
-            for pipe in pipes:
-                if not pipe.passed and pipe.x + pipe.width < bird_x:
-                    pipe.passed = True
-                    score += 1
 
             check_coin_collection()
 
-            # Увеличение скорости и уменьшение промежутка по мере набора очков
-            pipe_speed = min(PIPE_SPEED_START + (score // 10), PIPE_SPEED_MAX)
-            pipe_gap = max(PIPE_GAP_START - 10 * (score // 10), PIPE_GAP_MIN)
-
-            draw_bird(bird_x, bird_y)
-            for pipe in pipes:
-                pipe.draw(screen)
-            for coin in coins:
-                coin.draw(screen)
-
-            score_text = font.render(str(score), True, WHITE)
-            screen.blit(score_text, (10, 10))
-
+            # Проверка столкновений
             if check_collision(bird_y, pipes):
                 playing = False
                 game_over = True
@@ -308,17 +338,49 @@ def main():
                     highscore = score
                     save_highscore(highscore)
 
-            frame_count += 1
+            # Проверяем, прошла ли птица трубу, чтобы увеличить очки
+            for pipe in pipes:
+                if not pipe.passed and pipe.x + PIPE_WIDTH < bird_x:
+                    pipe.passed = True
+                    score += 1
 
-        if game_over:
-            over_text = font.render("Игра окончена", True, RED)
-            screen.blit(over_text, (WIDTH // 2 - over_text.get_width() // 2, 200))
-            score_text = font.render(f"Очки: {score}", True, WHITE)
-            screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 280))
-            restart_text = small_font.render("Нажмите ПРОБЕЛ для рестарта", True, WHITE)
-            screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, 360))
+                    # Сужаем разрыв и увеличиваем скорость постепенно, но не больше лимита
+                    if pipe_gap > PIPE_GAP_MIN:
+                        pipe_gap -= 1
+                    if pipe_speed < PIPE_SPEED_MAX:
+                        pipe_speed += 0.1
+
+            # Рисуем трубы
+            for pipe in pipes:
+                pipe.draw(screen)
+
+            # Рисуем монеты
+            for coin in coins:
+                if not coin.collected:
+                    coin.draw(screen)
+
+            # Рисуем птицу
+            draw_bird(bird_x, bird_y)
+
+            # Отображаем счет
+            score_text = font.render(f"Score: {score}", True, BLACK)
+            screen.blit(score_text, (10, 10))
+
+            highscore_text = small_font.render(f"Highscore: {highscore}", True, BLACK)
+            screen.blit(highscore_text, (10, 50))
+
+        elif game_over:
+            game_over_text = font.render("Game Over", True, RED)
+            screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//3))
+            score_text = small_font.render(f"Score: {score}", True, BLACK)
+            screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, HEIGHT//3 + 60))
+            highscore_text = small_font.render(f"Highscore: {highscore}", True, BLACK)
+            screen.blit(highscore_text, (WIDTH//2 - highscore_text.get_width()//2, HEIGHT//3 + 90))
+            restart_text = small_font.render("Press SPACE to Restart", True, BLACK)
+            screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, HEIGHT//3 + 140))
 
         pygame.display.flip()
+
 
 if __name__ == "__main__":
     main()
