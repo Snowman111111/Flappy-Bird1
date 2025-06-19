@@ -89,6 +89,29 @@ def draw_button(text, x, y, w, h, color, text_color):
 
 def draw_bird(x, y):
     pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
+    eye_radius = 5
+    pupil_radius = 2
+    eye_x = int(x + BIRD_RADIUS // 2)
+    eye_y = int(y - BIRD_RADIUS // 2)
+    pygame.draw.circle(screen, WHITE, (eye_x, eye_y), eye_radius)
+    pygame.draw.circle(screen, BLACK, (eye_x, eye_y), pupil_radius)
+
+    wing_width = 16
+    wing_height = 10
+    wing_x = int(x - BIRD_RADIUS // 2)
+    wing_y = int(y)
+    pygame.draw.ellipse(screen, (200, 0, 0), (wing_x, wing_y, wing_width, wing_height))
+
+    beak_length = 8
+    beak_height = 6
+    beak_x = int(x + BIRD_RADIUS)
+    beak_y = int(y)
+    points = [
+        (beak_x, beak_y),
+        (beak_x + beak_length, beak_y - beak_height // 2),
+        (beak_x + beak_length, beak_y + beak_height // 2)
+    ]
+    pygame.draw.polygon(screen, BLACK, points)
 
 def draw_heart(surface, x, y, size=20):
     radius = size // 4
@@ -255,6 +278,27 @@ class Cloud:
 
 clouds = [Cloud() for _ in range(5)]
 
+class FallingStar:
+    def __init__(self):
+        self.x = random.randint(0, WIDTH)
+        self.y = random.randint(-HEIGHT, 0)  # стартует выше экрана
+        self.length = random.randint(5, 15)
+        self.speed = random.uniform(2, 5)
+        self.color = STAR_COLOR
+
+    def update(self):
+        self.y += self.speed
+        if self.y > HEIGHT:
+            self.x = random.randint(0, WIDTH)
+            self.y = random.randint(-HEIGHT, 0)
+            self.speed = random.uniform(2, 5)
+            self.length = random.randint(5, 15)
+
+    def draw(self, surface):
+        end_y = self.y + self.length
+        pygame.draw.line(surface, self.color, (self.x, self.y), (self.x, end_y), 2)
+falling_stars = [FallingStar() for _ in range(20)]  # 20 падающих звезд
+
 bird_y = HEIGHT // 2
 bird_velocity = 0
 
@@ -304,6 +348,10 @@ def main():
             moon_x, moon_y = WIDTH - 70, 70
             pygame.draw.circle(screen, MOON_COLOR, (moon_x, moon_y), 40)
             pygame.draw.circle(screen, NIGHT_SKY, (moon_x + 15, moon_y - 10), 30)
+            for fstar in falling_stars:
+                fstar.update()
+                fstar.draw(screen)
+
         else:
             screen.fill(BLUE)
             pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
