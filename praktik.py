@@ -150,19 +150,19 @@ class Coin:
         self.collected = False
 
     def find_position(self, pipes):
-        max_attempts = 100
-        for _ in range(max_attempts):
-            y_candidate = random.randint(50, HEIGHT - 50)
-            collide = False
-            for pipe in pipes:
-                pipe_top = pipe.current_top_height if hasattr(pipe, 'current_top_height') else pipe.top_height
-                pipe_bottom = pipe_top + pipe_gap
-                if (self.x + self.radius > pipe.x and self.x - self.radius < pipe.x + pipe.width):
-                    if pipe_top - self.radius < y_candidate < pipe_bottom + self.radius:
-                        collide = True
-                        break
-            if not collide:
-                return y_candidate
+        # Найти ближайшую трубу справа (где будет монета)
+        nearest_pipe = None
+        for pipe in pipes:
+            if pipe.x + pipe.width > WIDTH and (nearest_pipe is None or pipe.x < nearest_pipe.x):
+                nearest_pipe = pipe
+
+        if nearest_pipe:
+            pipe_top = nearest_pipe.current_top_height
+            pipe_bottom = pipe_top + pipe_gap
+            # Размещаем монету в пределах зазора
+            return random.randint(int(pipe_top + self.radius), int(pipe_bottom - self.radius))
+
+        # Если подходящей трубы нет — центр экрана
         return HEIGHT // 2
 
     def update(self):
