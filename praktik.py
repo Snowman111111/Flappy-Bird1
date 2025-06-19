@@ -108,8 +108,8 @@ def draw_bird(x, y):
     beak_y = int(y)
     points = [
         (beak_x, beak_y),
-        (beak_x + beak_length, beak_y - beak_height // 2),
-        (beak_x + beak_length, beak_y + beak_height // 2)
+        (beak_x - beak_length, beak_y - beak_height // 2),
+        (beak_x - beak_length, beak_y + beak_height // 2)
     ]
     pygame.draw.polygon(screen, BLACK, points)
 
@@ -432,14 +432,14 @@ def main():
             easy_button = draw_button("Простой", WIDTH//2 - 195, HEIGHT//2, 120, 50, GREEN, WHITE)
             normal_button = draw_button("Нормальный", WIDTH//2 - 70, HEIGHT//2, 140, 50, ORANGE, WHITE)
             hard_button = draw_button("Сложный", WIDTH//2 + 75, HEIGHT//2, 120, 50, RED, WHITE)
-            info = small_font.render("Press N to toggle Day/Night anytime", True, BLACK)
+            info = small_font.render("Нажмите N для смены День/Ночь", True, BLACK)
             screen.blit(info, (WIDTH//2 - info.get_width()//2, HEIGHT//2 + 70))
 
         elif menu:
             title = font.render("Flappy Bird", True, BLACK)
             screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//3))
             start_button = draw_button("Start Game", WIDTH//2 - 100, HEIGHT//2, 200, 50, GREEN, WHITE)
-            info = small_font.render("Press N to toggle Day/Night anytime", True, BLACK)
+            info = small_font.render("Нажмите N для смены День/Ночь", True, BLACK)
             screen.blit(info, (WIDTH//2 - info.get_width()//2, HEIGHT//2 + 70))
 
         elif playing:
@@ -468,8 +468,6 @@ def main():
 
             hearts = [h for h in hearts if h.x + h.radius > 0 and not h.collected]
             check_heart_collection()
-
-
 
             for coin in coins:
                 if not coin.collected:
