@@ -89,6 +89,21 @@ def draw_button(text, x, y, w, h, color, text_color):
 def draw_bird(x, y):
     pygame.draw.circle(screen, RED, (int(x), int(y)), BIRD_RADIUS)
 
+def draw_ground():
+    ground_height = 60
+    grass_height = 20
+    ground_y = HEIGHT - ground_height
+
+    # Почва
+    pygame.draw.rect(screen, (139, 69, 19), (0, ground_y, WIDTH, ground_height))  # Коричневая почва
+
+    # Трава
+    pygame.draw.rect(screen, (34, 139, 34), (0, ground_y, WIDTH, grass_height))   # Зеленая трава
+
+    # Немного деталей: травинки
+    for i in range(0, WIDTH, 15):
+        pygame.draw.line(screen, (0, 100, 0), (i, ground_y), (i, ground_y - 5), 2)
+
 def check_collision(bird_y, pipes):
     for pipe in pipes:
         if pipe.collides_with(bird_x, bird_y, BIRD_RADIUS):
@@ -242,6 +257,7 @@ def main():
         else:
             screen.fill(BLUE)
             pygame.draw.circle(screen, YELLOW, (WIDTH - 70, 70), 40)
+            draw_ground()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
